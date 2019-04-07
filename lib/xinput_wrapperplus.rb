@@ -45,10 +45,18 @@ class XInputWrapperPlus < XInputWrapper
     @sk.knock
   end
   
-  def on_key_press(key, keycode)
+  def on_key_press(key, keycode, modifier=[])
+    
     puts 'inside on_key_press' if @debug
-    message key.to_s if @capture_all
+    
+    if @capture_all
+      
+      message modifier.any? ? (modifier + [key.to_s]).join('+') : key.to_s
+
+    end
+    
     @sk.reset if @lookup[keycode] != :control
+    
   end
   
   def on_super_key()
