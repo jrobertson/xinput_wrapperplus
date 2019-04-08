@@ -49,11 +49,7 @@ class XInputWrapperPlus < XInputWrapper
     
     puts 'inside on_key_press' if @debug
     
-    if @capture_all
-      
-      message modifier.any? ? (modifier + [key.to_s]).join('+') : key.to_s
-
-    end
+    message format_key(key, modifier) if @capture_all
     
     @sk.reset if @lookup[keycode] != :control
     
