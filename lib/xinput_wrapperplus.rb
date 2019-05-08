@@ -10,7 +10,7 @@ require 'xinput_wrapper'
 class XInputWrapperPlus < XInputWrapper
 
   def initialize(device: '3', host: 'sps', port: '59000', 
-                 topic: 'input/keyboard', verbose: true, lookup: {}, 
+                 topic: 'input', verbose: true, lookup: {}, 
                  debug: false, capture_all: false)
 
     super(device: device, verbose: verbose, lookup: lookup, 
@@ -21,6 +21,9 @@ class XInputWrapperPlus < XInputWrapper
                               external: self, verbose: verbose, debug: debug
     @sk.detect timeout: 0.7
 
+    @a = [] # Used to store mouse gestures
+    @timer = nil
+
   end
 
 
@@ -28,13 +31,15 @@ class XInputWrapperPlus < XInputWrapper
     puts 'knock' if @verbose
   end
 
-  def message(msg)
+  def message(msg, subtopic=:keyboard)
     
     puts ':: ' + msg.inspect if @verbose        
     
     return if msg.strip.empty?
     
-    @sps.notice "%s: %s" % [@topic, msg]
+    topic = [@topic, subtopic].join('/')
+    
+    @sps.notice "%s: %s" % [topic, msg]
     
   end  
   
@@ -45,6 +50,14 @@ class XInputWrapperPlus < XInputWrapper
     @sk.knock
   end
   
+  def on_gesture(a)
+    
+    puts 'inside on_gesture' if @debug    
+    points = @a.map {|coords| coords.map {|x| x}.join(',') }.join(' ')
+    message points, 'motion'
+    
+  end
+  
   def on_key_press(key, keycode, modifier=[])
     
     puts 'inside on_key_press' if @debug
@@ -52,6 +65,30 @@ class XInputWrapperPlus < XInputWrapper
     message format_key(key, modifier) if @capture_all
     
     @sk.reset if @lookup[keycode] != :control
+    
+  end
+  
+  def on_mousemove(x,y)
+    
+    if @debug then
+      puts "on_mousemove() x: %s y: %s" % [x, y]
+    end
+    
+    @timer.exit if @timer
+
+    @a << [x,y]
+
+
+    @timer = Thread.new do 
+      
+      sleep 0.25
+      puts 'inside timer' if @debug
+      
+      on_gesture(@a) if @a.length > 6 and @a.length < 36
+      @a = []
+
+    end
+    
     
   end
   
