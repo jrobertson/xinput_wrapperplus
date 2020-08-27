@@ -11,39 +11,51 @@ class XInputWrapperPlus < XInputWrapper
 
   def initialize(device: '3', host: 'sps', port: '59000', 
                  topic: 'input', verbose: true, lookup: {}, 
-                 debug: false, capture_all: false)
+                 debug: false, capture_all: false, keys: [], 
+                 keypress_detection: true)
 
     super(device: device, verbose: verbose, lookup: lookup, 
-          debug: debug)
+          debug: debug, keys: keys)
+    
     @topic, @capture_all = topic, capture_all
+    @keypress_detection = keypress_detection
+    
     @sps = SPSPub.new host: host, port: port
     @sk = SecretKnock.new short_delay: 0.25, long_delay: 0.5, 
                               external: self, verbose: verbose, debug: debug
     @sk.detect timeout: 0.7
 
     @a = [] # Used to store mouse gestures
-    @timer = nil
+    @timer, @t2 = nil , Time.now - 30
 
   end
-
 
   def knock()
     puts 'knock' if @verbose
   end
-
+  
   def message(msg, subtopic=:keyboard)
     
     puts ':: ' + msg.inspect if @verbose        
     
     return if msg.strip.empty?
     
-    topic = [@topic, subtopic].join('/')
+    topic = [@topic, subtopic].compact.join('/')
     
     @sps.notice "%s: %s" % [topic, msg]
     
-  end  
+  end    
   
-  protected
+  private  
+  
+  def anykey_press()
+    
+    if @keypress_detection and (Time.now > @t2 + 30) then
+      message 'keypress detected', nil
+      @t2 = Time.now
+    end
+    
+  end
   
   def on_control_key()
     puts 'inside on_control_key' if @debug
