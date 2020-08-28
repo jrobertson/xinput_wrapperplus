@@ -9,18 +9,22 @@ require 'xinput_wrapper'
 
 class XInputWrapperPlus < XInputWrapper
 
-  def initialize(device: '3', host: 'sps', port: '59000', 
+  def initialize(host: 'sps', port: '59000', 
                  topic: 'input', verbose: true, lookup: {}, 
                  debug: false, capture_all: false, keys: [], 
-                 keypress_detection: true)
+                 keypress_detection: true, motion_detection: true)
 
-    super(device: device, verbose: verbose, lookup: lookup, 
+    puts 'before super'
+    super(verbose: verbose, lookup: lookup, 
           debug: debug, keys: keys)
+    puts 'after super'
     
     @topic, @capture_all = topic, capture_all
     @keypress_detection = keypress_detection
-    
+    @motion_detection = motion_detection
+
     @sps = SPSPub.new host: host, port: port
+
     @sk = SecretKnock.new short_delay: 0.25, long_delay: 0.5, 
                               external: self, verbose: verbose, debug: debug
     @sk.detect timeout: 0.7
@@ -86,6 +90,11 @@ class XInputWrapperPlus < XInputWrapper
       puts "on_mousemove() x: %s y: %s" % [x, y]
     end
     
+    if @motion_detection and (Time.now > @t2 + 30) then
+      message 'motion detected', nil
+      @t2 = Time.now
+    end
+=begin    
     @timer.exit if @timer
 
     @a << [x,y]
@@ -100,7 +109,7 @@ class XInputWrapperPlus < XInputWrapper
       @a = []
 
     end
-    
+=end    
     
   end
   
