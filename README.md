@@ -1,35 +1,20 @@
-# Introducing the xinput_wrapperplus gem
+# Using XInputWrapperPlus to trigger upon a key press and more
 
 
+## Example
+
+    require "socket"
     require 'xinput_wrapperplus'
 
-    xiw = XInputWrapperPlus.new device: '3', topic: 'jessie/input/keyboard', 
-            verbose: true, host: 'sps.home'
+    hostname =  Socket.gethostname
+    keys = %i(control super f6)
+
+    xiw = XInputWrapperPlus.new topic: hostname + '/input', 
+             lookup:  {105 => :control, 37 => :control, 134 => :super}, 
+             host: 'sps.home', keys: keys
     xiw.listen
 
-In the above example, whenever the *superkey* is pressed or a secret knock is detected using the *control* key a SimplePubSub message is published to the messaging broker at *sps.home*.
+The above example is intended to run in the background to listen for key presses or mouse movement.
+When either the ctrl key, super key (windows logo key), or F6 key is pressed a message is published to the SimplePubSub broker at *sps.home* on port 59000. In addition, it publishes the detection of any key or mouse movent to the broker, ever 30 seconds.
 
-Output:
-
-<pre>
-keycode: 133
-super key presssed
-:: "super key pressed"
-keycode: 37
-control key presssed
-
-1 knock
-keycode: 37
-control key presssed
-2 knock
-:: "e"
-
-</pre>
-
-In the above output the superkey was pressed, and then the *control* key was pressed twice in quick succession to yield the letter *e*.
-
-## Resources
-
-* xinput_wrapperplus https://rubygems.org/gems/xinput_wrapperplus
-
-xinput xinputwrapperplus gem secretknock superkey
+xinputwrapperplus xinput
