@@ -3,6 +3,7 @@
 # file: xinput_wrapperplus.rb
 
 
+require 'wmctrl'
 require 'sps-pub'
 require 'secret_knock'
 require 'xinput_wrapper'
@@ -12,7 +13,8 @@ class XInputWrapperPlus < XInputWrapper
   def initialize(host: 'sps', port: '59000', 
                  topic: 'input', verbose: true, lookup: {}, 
                  debug: false, capture_all: false, keys: [], 
-                 keypress_detection: true, motion_detection: true)
+                 keypress_detection: true, motion_detection: true, 
+                 window_context: false)
 
     puts 'before super'
     super(verbose: verbose, lookup: lookup, 
@@ -22,15 +24,17 @@ class XInputWrapperPlus < XInputWrapper
     @topic, @capture_all = topic, capture_all
     @keypress_detection = keypress_detection
     @motion_detection = motion_detection
+    @window_context = window_context
 
     @sps = SPSPub.new host: host, port: port
 
     @sk = SecretKnock.new short_delay: 0.25, long_delay: 0.5, 
                               external: self, verbose: verbose, debug: debug
     @sk.detect timeout: 0.7
+    @interval = 120
 
     @a = [] # Used to store mouse gestures
-    @timer, @t2 = nil , Time.now - 30
+    @timer, @t2 = nil , Time.now - @interval
 
   end
 
@@ -46,7 +50,18 @@ class XInputWrapperPlus < XInputWrapper
     
     topic = [@topic, subtopic].compact.join('/')
     
-    @sps.notice "%s: %s" % [topic, msg]
+    if @window_context then      
+
+      wm = WMCtrl.display
+      win = wm.windows.find {|x| x.active}
+      
+      @sps.notice "%s: %s in %s" % [topic, msg, win.title]
+      
+    else
+      
+      @sps.notice "%s: %s" % [topic, msg]
+      
+    end
     
   end    
   
@@ -54,7 +69,7 @@ class XInputWrapperPlus < XInputWrapper
   
   def anykey_press()
     
-    if @keypress_detection and (Time.now > @t2 + 30) then
+    if @keypress_detection and (Time.now > @t2 + @interval) then
       message 'keypress detected', nil
       @t2 = Time.now
     end
@@ -90,7 +105,7 @@ class XInputWrapperPlus < XInputWrapper
       puts "on_mousemove() x: %s y: %s" % [x, y]
     end
     
-    if @motion_detection and (Time.now > @t2 + 30) then
+    if @motion_detection and (Time.now > @t2 + @interval) then
       message 'motion detected', nil
       @t2 = Time.now
     end
